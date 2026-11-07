@@ -1,0 +1,51 @@
+
+name: airline-deployment
+
+services:
+
+  postgresdb:
+    image: postgres:16-alpine
+    container_name: airline-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: exam123
+      POSTGRES_DB: airlinedb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d airlinedb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - airline-network
+
+  airline-service:
+    image: docker-skill-exam-2400030220:latest
+    build:
+      context: ./soa-airline
+      dockerfile: Dockerfile
+    container_name: airline-backend
+    ports:
+      - "220:2020"
+    environment:
+      DB_URL: jdbc:postgresql://postgresdb:5432/airlinedb
+      DB_USERNAME: postgres
+      DB_PASSWORD: exam123
+    depends_on:
+      postgresdb:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - airline-network
+
+volumes:
+  postgres_data:
+
+networks:
+  airline-network:
+    driver: bridge
